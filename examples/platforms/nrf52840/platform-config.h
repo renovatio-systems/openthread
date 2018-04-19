@@ -506,4 +506,18 @@
 #define NRF_MBEDTLS_AES_ALT_INTERRUPT_CONTEXT 0
 #endif
 
+/**
+ * @def NRF_802154_TX_STARTED_NOTIFY_ENABLED
+ *
+ * If notification of started transmission should be enabled in the driver.
+ *
+ * @note This feature is enabled by default if OpenThread time synchronization service is enabled.
+ *
+ */
+#ifndef NRF_802154_TX_STARTED_NOTIFY_ENABLED
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+#define NRF_802154_TX_STARTED_NOTIFY_ENABLED 1
+#endif
+#endif
+
 #endif // PLATFORM_CONFIG_H_
