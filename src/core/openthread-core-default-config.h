@@ -1637,8 +1637,7 @@
  *
  * Define as 1 to enable the time synchronization service feature.
  *
- * @note Concurrent access to AES MUST be supported for this feature, platforms do not support concurrent
- *       access to hardware AES must disable MBEDTLS_AES_ALT, and use software AES provided by mbedtls.
+ * @note If it's enabled, plaforms must support interrupt context and concurrent access AES.
  *
  */
 #ifndef OPENTHREAD_CONFIG_ENABLE_TIME_SYNC

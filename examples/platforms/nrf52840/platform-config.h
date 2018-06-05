@@ -495,18 +495,6 @@
 #endif
 
 /**
- * @def NRF_MBEDTLS_AES_ALT_INTERRUPT_CONTEXT
- *
- * Define as 1 to enable AES usage in interrupt context.
- *
- * @note A software AES is enabled to support AES usage in interrupt context.
- *
- */
-#ifndef NRF_MBEDTLS_AES_ALT_INTERRUPT_CONTEXT
-#define NRF_MBEDTLS_AES_ALT_INTERRUPT_CONTEXT 0
-#endif
-
-/**
  * @def NRF_802154_TX_STARTED_NOTIFY_ENABLED
  *
  * If notification of started transmission should be enabled in the driver.
