@@ -635,6 +635,9 @@ otError MeshForwarder::SendFragment(Message &aMessage, Mac::Frame &aFrame)
     uint16_t                dstpan;
     uint8_t                 secCtl = Mac::Frame::kSecNone;
     otError                 error  = OT_ERROR_NONE;
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+    Mac::HeaderIe ieList[2];
+#endif
 
     if (mAddMeshHeader)
     {
@@ -648,7 +651,20 @@ otError MeshForwarder::SendFragment(Message &aMessage, Mac::Frame &aFrame)
     }
 
     // initialize MAC header
-    fcf = Mac::Frame::kFcfFrameData | Mac::Frame::kFcfFrameVersion2006;
+    fcf = Mac::Frame::kFcfFrameData;
+
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+
+    if (aMessage.IsTimeSync())
+    {
+        fcf |= Mac::Frame::kFcfFrameVersion2015 | Mac::Frame::kFcfIePresent;
+    }
+    else
+#endif
+    {
+        fcf |= Mac::Frame::kFcfFrameVersion2006;
+    }
+
     fcf |= (mMacDest.IsShort()) ? Mac::Frame::kFcfDstAddrShort : Mac::Frame::kFcfDstAddrExt;
     fcf |= (mMacSource.IsShort()) ? Mac::Frame::kFcfSrcAddrShort : Mac::Frame::kFcfSrcAddrExt;
 
@@ -700,7 +716,21 @@ otError MeshForwarder::SendFragment(Message &aMessage, Mac::Frame &aFrame)
 
     if (dstpan == netif.GetMac().GetPanId())
     {
-        fcf |= Mac::Frame::kFcfPanidCompression;
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+        // Handle a special case in IEEE 802.15.4-2015, when Pan ID Compression is 0, but Src Pan ID is not present:
+        //  Dest Address:       Extended
+        //  Src Address:        Extended
+        //  Dest Pan ID:        Present
+        //  Src Pan ID:         Not Present
+        //  Pan ID Compression: 0
+
+        if ((fcf & Mac::Frame::kFcfFrameVersionMask) != Mac::Frame::kFcfFrameVersion2015 ||
+            (fcf & Mac::Frame::kFcfDstAddrMask) != Mac::Frame::kFcfDstAddrExt ||
+            (fcf & Mac::Frame::kFcfSrcAddrMask) != Mac::Frame::kFcfSrcAddrExt)
+#endif
+        {
+            fcf |= Mac::Frame::kFcfPanidCompression;
+        }
     }
 
     aFrame.InitMacHeader(fcf, secCtl);
@@ -708,6 +738,28 @@ otError MeshForwarder::SendFragment(Message &aMessage, Mac::Frame &aFrame)
     aFrame.SetSrcPanId(netif.GetMac().GetPanId());
     aFrame.SetDstAddr(mMacDest);
     aFrame.SetSrcAddr(mMacSource);
+
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+
+    if (aMessage.IsTimeSync())
+    {
+        Mac::TimeIe *ie;
+        uint8_t *    cur = NULL;
+
+        ieList[0].Init();
+        ieList[0].SetId(Mac::Frame::kHeaderIeVendor);
+        ieList[0].SetLength(sizeof(Mac::TimeIe));
+        ieList[1].Init();
+        ieList[1].SetId(Mac::Frame::kHeaderIeTermination2);
+        ieList[1].SetLength(0);
+        aFrame.AppendHeaderIe(ieList, 2);
+
+        cur = aFrame.GetHeaderIe(Mac::Frame::kHeaderIeVendor);
+        ie  = reinterpret_cast<Mac::TimeIe *>(cur + sizeof(Mac::HeaderIe));
+        ie->Init();
+    }
+
+#endif
 
     payload = aFrame.GetPayload();
 
@@ -846,6 +898,9 @@ otError MeshForwarder::SendFragment(Message &aMessage, Mac::Frame &aFrame)
     if (mMessageNextOffset < aMessage.GetLength())
     {
         aFrame.SetFramePending(true);
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+        aMessage.SetTimeSync(false);
+#endif
     }
 
 exit:
@@ -1115,6 +1170,10 @@ void MeshForwarder::HandleReceivedFrame(Mac::Frame &aFrame)
     linkInfo.mRss          = aFrame.GetRssi();
     linkInfo.mLqi          = aFrame.GetLqi();
     linkInfo.mLinkSecurity = aFrame.GetSecurityEnabled();
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+    linkInfo.mNetworkTimeOffset = aFrame.GetNetworkTimeOffset();
+    linkInfo.mTimeSyncSeq       = aFrame.GetTimeSyncSeq();
+#endif
 
     payload       = aFrame.GetPayload();
     payloadLength = aFrame.GetPayloadLength();
@@ -1209,6 +1268,10 @@ void MeshForwarder::HandleFragment(uint8_t *               aFrame,
         message->SetLinkSecurityEnabled(aLinkInfo.mLinkSecurity);
         message->SetPanId(aLinkInfo.mPanId);
         message->AddRss(aLinkInfo.mRss);
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+        message->SetTimeSyncSeq(aLinkInfo.mTimeSyncSeq);
+        message->SetNetworkTimeOffset(aLinkInfo.mNetworkTimeOffset);
+#endif
         headerLength = netif.GetLowpan().Decompress(*message, aMacSource, aMacDest, aFrame, aFrameLength,
                                                     fragmentHeader.GetDatagramSize());
         VerifyOrExit(headerLength > 0, error = OT_ERROR_PARSE);
@@ -1377,6 +1440,10 @@ void MeshForwarder::HandleLowpanHC(uint8_t *               aFrame,
     message->SetLinkSecurityEnabled(aLinkInfo.mLinkSecurity);
     message->SetPanId(aLinkInfo.mPanId);
     message->AddRss(aLinkInfo.mRss);
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+    message->SetTimeSyncSeq(aLinkInfo.mTimeSyncSeq);
+    message->SetNetworkTimeOffset(aLinkInfo.mNetworkTimeOffset);
+#endif
 
     headerLength = netif.GetLowpan().Decompress(*message, aMacSource, aMacDest, aFrame, aFrameLength, 0);
     VerifyOrExit(headerLength > 0, error = OT_ERROR_PARSE);

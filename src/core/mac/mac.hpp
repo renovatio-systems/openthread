@@ -37,6 +37,7 @@
 #include "openthread-core-config.h"
 
 #include <openthread/platform/radio.h>
+#include <openthread/platform/time.h>
 
 #include "common/locator.hpp"
 #include "common/tasklet.hpp"
@@ -876,6 +877,14 @@ public:
      */
     bool IsEnabled(void) { return mEnabled; }
 
+    /**
+     * This method processes authentication and encryption for the transmission frame.
+     *
+     * @param[in]  aFrame  The frame going to be transmitted.
+     *
+     */
+    void ProcessTransmitSecurity(Frame &aFrame);
+
 private:
     enum
     {
@@ -909,7 +918,6 @@ private:
     };
 
     void    GenerateNonce(const ExtAddress &aAddress, uint32_t aFrameCounter, uint8_t aSecurityLevel, uint8_t *aNonce);
-    void    ProcessTransmitSecurity(Frame &aFrame);
     otError ProcessReceiveSecurity(Frame &aFrame, const Address &aSrcAddr, Neighbor *aNeighbor);
     void    UpdateIdleMode(void);
     void    StartOperation(Operation aOperation);
@@ -946,6 +954,11 @@ private:
     void LogFrameRxFailure(const Frame *aFrame, otError aError) const;
     void LogFrameTxFailure(const Frame &aFrame, otError aError) const;
     void LogBeacon(const char *aActionText, const BeaconPayload &aBeaconPayload) const;
+
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+    void    ProcessTimeIe(Frame &aFrame);
+    uint8_t GetTimeIeOffset(Frame &aFrame);
+#endif
 
     static const char *OperationToString(Operation aOperation);
 
