@@ -35,14 +35,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include <openthread-core-config.h>
 #include <openthread/config.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/diag.h>
+#include <openthread/platform/time.h>
 
 #include "utils/code_utils.h"
 
 #include "em_core.h"
 #include "rail.h"
+
+#define XTAL_ACCURACY       200 // The crystal used on BRD4304A has ±100ppm accuracy.
 
 static uint32_t sTimerHi   = 0;
 static uint32_t sTimerLo   = 0;
@@ -52,6 +56,30 @@ static bool     sIsRunning = false;
 
 void efr32AlarmInit(void)
 {
+}
+
+uint64_t otPlatAlarmMicroGetNow(void)
+{
+    uint32_t timer_lo;
+    uint64_t timer_us;
+
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_CRITICAL();
+
+    timer_lo = RAIL_GetTime();
+
+    if (timer_lo < sTimerLo)
+    {
+        sTimerHi++;
+    }
+
+    sTimerLo = timer_lo;
+
+    timer_us = (((uint64_t)sTimerHi << 32) | sTimerLo);
+
+    CORE_EXIT_CRITICAL();
+
+    return timer_us;
 }
 
 uint32_t otPlatAlarmMilliGetNow(void)
@@ -135,3 +163,15 @@ exit:
 void RAILCb_TimerExpired(void)
 {
 }
+
+#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+uint64_t otPlatTimeGet(void)
+{
+    return otPlatAlarmMicroGetNow();
+}
+
+uint16_t otPlatTimeGetXtalAccuracy(void)
+{
+    return XTAL_ACCURACY;
+}
+#endif // OPENTHREAD_CONFIG_ENABLE_TIME_SYNC

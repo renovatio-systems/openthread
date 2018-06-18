@@ -108,4 +108,14 @@
  */
 #define RADIO_CONFIG_SRC_MATCH_EXT_ENTRY_NUM                   6
 
+/**
+ * @def OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
+ *
+ * Define as 1 to enable the time synchronization service feature.
+ *
+ * @note If it's enabled, plaforms must support interrupt context and concurrent access AES.
+ *
+ */
+#define OPENTHREAD_CONFIG_ENABLE_TIME_SYNC                      1
+
 #endif  // OPENTHREAD_CORE_EFR32_CONFIG_H_
