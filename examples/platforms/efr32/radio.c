@@ -88,7 +88,6 @@ static otError      sTransmitError;
 #if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
 static otRadioIeInfo sTransmitIeInfo;
 static otRadioIeInfo sReceivedIeInfo;
-static otInstance *  sInstance = NULL;
 #endif
 
 typedef struct srcMatchEntry
@@ -343,10 +342,6 @@ otError otPlatRadioTransmit(otInstance *aInstance, otRadioFrame *aFrame)
     RAIL_CsmaConfig_t csmaConfig = RAIL_CSMA_CONFIG_802_15_4_2003_2p4_GHz_OQPSK_CSMA;
     RAIL_TxOptions_t  txOptions  = RAIL_TX_OPTIONS_NONE;
     RAIL_Status_t     status;
-
-#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
-    sInstance = aInstance;
-#endif
 
     otEXPECT_ACTION((sState != OT_RADIO_STATE_DISABLED) && (sState != OT_RADIO_STATE_TRANSMIT),
                     error = OT_ERROR_INVALID_STATE);
@@ -865,26 +860,3 @@ int8_t otPlatRadioGetReceiveSensitivity(otInstance *aInstance)
     return EFR32_RECEIVE_SENSITIVITY;
 }
 
-#if OPENTHREAD_CONFIG_ENABLE_TIME_SYNC
-void erf32_tx_started(const uint8_t *aFrame)
-{
-    assert(aFrame == sTransmitPsdu);
-
-    if (sTransmitFrame.mIeInfo->mTimeIeOffset != 0)
-    {
-        uint8_t *timeIe = sTransmitFrame.mPsdu + sTransmitFrame.mIeInfo->mTimeIeOffset;
-        uint64_t time   = otPlatTimeGet() + sTransmitFrame.mIeInfo->mNetworkTimeOffset;
-
-        *timeIe = sTransmitFrame.mIeInfo->mTimeSyncSeq;
-
-        *(++timeIe) = (uint8_t)(time & 0xff);
-        for (uint8_t i = 1; i < sizeof(uint64_t); i++)
-        {
-            time        = time >> 8;
-            *(++timeIe) = (uint8_t)(time & 0xff);
-        }
-
-        otPlatRadioFrameUpdated(sInstance, &sTransmitFrame);
-    }
-}
-#endif

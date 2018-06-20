@@ -115,7 +115,9 @@
  *
  * @note If it's enabled, plaforms must support interrupt context and concurrent access AES.
  *
- */
+	 */
 #define OPENTHREAD_CONFIG_ENABLE_TIME_SYNC                      1
 
 #endif  // OPENTHREAD_CORE_EFR32_CONFIG_H_
+
+

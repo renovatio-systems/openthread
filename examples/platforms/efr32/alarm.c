@@ -84,26 +84,7 @@ uint64_t otPlatAlarmMicroGetNow(void)
 
 uint32_t otPlatAlarmMilliGetNow(void)
 {
-    uint32_t timer_lo;
-    uint32_t timer_ms;
-
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
-
-    timer_lo = RAIL_GetTime();
-
-    if (timer_lo < sTimerLo)
-    {
-        sTimerHi++;
-    }
-
-    sTimerLo = timer_lo;
-
-    timer_ms = (((uint64_t)sTimerHi << 32) | sTimerLo) / 1000;
-
-    CORE_EXIT_CRITICAL();
-
-    return timer_ms;
+    return otPlatAlarmMicroGetNow()/1000;
 }
 
 void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t t0, uint32_t dt)
